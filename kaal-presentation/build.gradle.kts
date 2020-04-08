@@ -89,7 +89,7 @@ val androidSourcesJar by tasks.creating(Jar::class) {
 
 val androidDokkaHtmlJar by tasks.creating(Jar::class) {
     archiveClassifier.set("kdoc-html")
-    from("$buildDir/dokka/html")
+    from(dokka.outputDirectory)
     dependsOn(dokka)
 }
 
