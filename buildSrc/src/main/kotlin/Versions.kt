@@ -10,7 +10,7 @@ object Versions {
     const val dokka = "0.10.1"
 
     const val gradle = "6.2.2"
-    const val gradleBuildTools = "3.6.2"
+    const val gradleBuildTools = "4.0.0-rc01"
 
     const val bintrayGradle = "1.8.4"
 
