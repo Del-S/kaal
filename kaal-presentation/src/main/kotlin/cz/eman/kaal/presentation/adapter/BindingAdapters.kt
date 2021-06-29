@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package cz.eman.kaal.presentation.adapter
 
 import android.view.View
@@ -7,6 +9,7 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import cz.eman.kaal.presentation.adapter.binder.ItemBinder
 import cz.eman.kaal.presentation.adapter.binder.VariableBinder
+import cz.eman.logger.logError
 
 /**
  * Binds adapter to [RecyclerView] using [BindingRecyclerViewAdapter]. Parameters are used to create this adapter and
@@ -17,7 +20,7 @@ import cz.eman.kaal.presentation.adapter.binder.VariableBinder
  * @since 0.8.0
  */
 @BindingAdapter(
-    value = ["items", "itemBinder", "variableBinders", "itemOnClick", "itemOnLongClick", "differ", "limit"],
+    value = ["items", "itemBinder", "variableBinders", "itemOnClick", "itemOnLongClick", "differ", "limit", "paging"],
     requireAll = false
 )
 fun <T : Any> bindRecyclerView(
@@ -28,21 +31,22 @@ fun <T : Any> bindRecyclerView(
     clickListener: ((View, T) -> Unit)?,
     longClickListener: ((View, T) -> Unit)?,
     differ: DiffUtil.ItemCallback<T>?,
-    limit: Int?
+    limit: Int?,
+    paging: Boolean = false
 ) {
     val adapter = recyclerView.adapter
     if (adapter == null) {
         requireNotNull(binder) { "ItemBinder must be defined" }
 
-        recyclerView.adapter = BindingRecyclerViewAdapter(
+        val config = BindingAdapterConfig(
             items = items,
             itemBinder = binder,
+            variableBinders = variables,
             itemClickListener = clickListener,
             itemLongClickListener = longClickListener,
-            variableBinders = variables,
-            differ = differ,
             limit = limit
         )
+        recyclerView.adapter = buildAdapter(config, paging, differ)
     } else {
         @Suppress("UNCHECKED_CAST")
         adapter as BindingRecyclerViewAdapter<T>
@@ -59,7 +63,7 @@ fun <T : Any> bindRecyclerView(
  * @since 0.8.0
  */
 @BindingAdapter(
-    value = ["items", "itemBinder", "variableBinders", "itemOnClick", "itemOnLongClick", "differ"],
+    value = ["items", "itemBinder", "variableBinders", "itemOnClick", "itemOnLongClick", "differ", "paging"],
     requireAll = false
 )
 fun <T : Any> bindViewPager2(
@@ -69,23 +73,37 @@ fun <T : Any> bindViewPager2(
     variables: Array<VariableBinder<T>>?,
     clickListener: ((View, T) -> Unit)?,
     longClickListener: ((View, T) -> Unit)?,
-    differ: DiffUtil.ItemCallback<T>?
+    differ: DiffUtil.ItemCallback<T>?,
+    paging: Boolean = false
 ) {
     val adapter = viewPager.adapter
     if (adapter == null) {
         requireNotNull(binder) { "ItemBinder must be defined" }
 
-        viewPager.adapter = BindingRecyclerViewAdapter(
+        val config = BindingAdapterConfig(
             items = items,
             itemBinder = binder,
+            variableBinders = variables,
             itemClickListener = clickListener,
             itemLongClickListener = longClickListener,
-            variableBinders = variables,
-            differ = differ
         )
+        viewPager.adapter = buildAdapter(config, paging, differ)
     } else {
         @Suppress("UNCHECKED_CAST")
         adapter as BindingRecyclerViewAdapter<T>
         adapter.setItems(items)
+    }
+}
+
+private fun <T : Any> buildAdapter(
+    config: BindingAdapterConfig<T>,
+    paging: Boolean,
+    differ: DiffUtil.ItemCallback<T>?
+): RecyclerView.Adapter<*> = when {
+    !paging -> BindingRecyclerViewAdapter.build(config, differ)
+    paging && differ != null -> BindingPagingRecyclerViewAdapter.build(config, differ)
+    else -> {
+        config.logError { "Failed to create BindingPagingRecyclerViewAdapter (no differ supplied)" }
+        BindingRecyclerViewAdapter.build(config, differ)
     }
 }
